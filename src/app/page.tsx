@@ -18,7 +18,7 @@ const CLASSES_DISPONIVEIS = [
   { id: "juvenis", nome: "Classe de Juvenis", icon: UserCheck, color: "bg-emerald-600", light: "bg-emerald-50", text: "text-emerald-600" }
 ];
 
-const MODO_TESTE = true; 
+const MODO_TESTE = false; 
 
 interface Aluno {
   id: string;
