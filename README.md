@@ -1,36 +1,133 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# Check-in JA - Escola Sabatina Jovem
 
-## Getting Started
+Uma aplicação Web Mobile-First moderna para gestão de presença, gamificação e estatísticas missionárias do Ministério Jovem.
 
-First, run the development server:
+## Sobre o Projeto
+
+O **Check-in JA** foi desenvolvido para modernizar a chamada da Escola Sabatina. Focando na experiência do usuário (UX), ele elimina o papel e traz uma interface fluida e gamificada.
+
+O sistema permite que os jovens marquem presença, respondam a perguntas de termômetro missionário (Lição, PG, Estudos, Missão) e visualizem um **Ranking em tempo real** e um **Dashboard** de acompanhamento histórico.
+
+## Funcionalidades Principais
+
+- **Check-in Inteligente**: Validação automática de dia (Sábado) e horário (até 12h).
+- **Optimistic UI**: Feedback visual instantâneo sem recarregamento de página.
+- **Dashboard Missionário**: Acompanhamento histórico (Semanal e Mensal).
+- **Ranking Gamificado**: Pódio visual para o Top 3 e lista de honra.
+- **Design Premium**: Glassmorphism, animações suaves e layout responsivo.
+- **Segurança**: Bloqueio de check-ins duplicados ou fora de hora.
+
+## Tecnologias Utilizadas
+
+- **Frontend**: Next.js (App Router), React, TypeScript  
+- **Estilização**: Tailwind CSS, clsx, tailwind-merge  
+- **Backend / DB**: Firebase Firestore  
+- **Animações**: Framer Motion  
+- **Ícones**: Lucide React  
+- **Feedback**: React Hot Toast  
+
+## Como Rodar o Projeto
+
+### 1. Pré-requisitos
+
+- Node.js v18 ou superior  
+- Git  
+
+### 2. Clonar o Repositório
+
+```bash
+git clone https://github.com/SEU_USUARIO/checkin-ja.git
+cd checkin-ja
+```
+
+### 3. Instalar Dependências
+
+```bash
+npm install
+```
+
+### 4. Configurar Variáveis de Ambiente
+
+Crie um arquivo `.env.local` na raiz do projeto:
+
+```env
+NEXT_PUBLIC_FIREBASE_API_KEY=sua_api_key
+NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN=seu_projeto.firebaseapp.com
+NEXT_PUBLIC_FIREBASE_PROJECT_ID=seu_projeto_id
+NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET=seu_projeto.appspot.com
+NEXT_PUBLIC_FIREBASE_MESSAGING_SENDER_ID=seu_sender_id
+NEXT_PUBLIC_FIREBASE_APP_ID=seu_app_id
+```
+
+### 5. Iniciar o Servidor
 
 ```bash
 npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+Acesse: **http://localhost:3000**
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+## Regras de Segurança do Firebase
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+```js
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    match /alunos/{document=**} {
+      allow read, write: if true;
+    }
+    match /estatisticas/{document=**} {
+      allow read, write: if true;
+    }
+    match /{document=**} {
+      allow read, write: if false;
+    }
+  }
+}
+```
 
-## Learn More
+## Modo de Teste
 
-To learn more about Next.js, take a look at the following resources:
+No arquivo `src/app/page.tsx`:
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+```ts
+const MODO_TESTE = true; // false em produção
+```
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+Quando ativo, ignora validações de dia e horário.
 
-## Deploy on Vercel
+## Estrutura do Banco de Dados
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
+### Coleção: alunos
 
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+```json
+{
+  "nome": "Nome do Jovem",
+  "presencas": 15,
+  "ultimoCheckin": "Timestamp",
+  "historico": ["Timestamp", "Timestamp"]
+}
+```
+
+### Coleção: estatisticas
+
+```json
+{
+  "alunoId": "ID_DO_ALUNO",
+  "nome": "Nome do Jovem",
+  "data": "Timestamp",
+  "licao": true,
+  "pg": false,
+  "estudo": true,
+  "missao": false
+}
+```
+
+## Deploy
+
+Este projeto está pronto para deploy na **Vercel**:
+
+1. Crie uma conta na Vercel  
+2. Importe o repositório do GitHub  
+3. Configure as variáveis de ambiente  
+4. Clique em **Deploy** 🚀
