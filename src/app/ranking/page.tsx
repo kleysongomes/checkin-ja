@@ -3,15 +3,30 @@
 import { useState, useEffect, useMemo } from "react";
 import { db } from "@/lib/firebase";
 import { collection, getDocs, query, Timestamp } from "firebase/firestore";
-import { ArrowLeft, Crown, Medal, Trophy, Star } from "lucide-react";
+import { ArrowLeft, Crown, Star, Users } from "lucide-react";
 import Link from "next/link";
 import { motion } from "framer-motion";
 import { cn } from "@/lib/utils";
+
+// CONFIGURAÇÃO: BLACKLIST PROFESSORES
+const PROFESSORES_IDS = [
+  "M4ialQNzQrB72gNJCYfF",//Kleyson
+  "40Al8hIstVIOsykySkFh",//Makel
+  "806Kb6ZfsBFIsUY8GdYd",//Jarlean
+  "9JIoC3V8UD49mhw0ZOII",//Nanda
+  "FtXEvoTMnhCaUs02WwKc",//Degley
+  "G4b2wQKTHnzND4aBtyWg",//Pietra
+  "YspNbmYvpK3ylOC7MnJn",//Navit
+  "mUivx4Ms9w6p3mPOmbNx",//Ingryd
+  "Wwn7VuWSh2OnlnUKWPtO",//Erica juvenis, validar se deixa na regra
+  "jD1dMnQ7ZQOf6ztS7Xvv",//João juvenis, validar se deixa na regra
+];
 
 interface Aluno {
   id: string;
   nome: string;
   presencas: number;
+  classe: string;
   ultimoCheckin: Timestamp | null;
 }
 
@@ -19,17 +34,42 @@ export default function RankingPage() {
   const [mounted, setMounted] = useState(false);
   const [alunos, setAlunos] = useState<Aluno[]>([]);
   const [loading, setLoading] = useState(true);
+  const [classeNome, setClasseNome] = useState("");
 
   useEffect(() => {
     setMounted(true);
+    
+    // 1. Verifica Classe
+    const classeId = localStorage.getItem("checkin_classe_pref");
+    if (!classeId) {
+      window.location.href = "/";
+      return;
+    }
+    setClasseNome(classeId === 'jovens' ? 'Classe de Jovens' : 'Classe de Juvenis');
+
     async function fetchRanking() {
       try {
+        // 2. Busca TODOS (para tratar quem não tem campo 'classe')
         const q = query(collection(db, "alunos"));
         const snapshot = await getDocs(q);
-        const data = snapshot.docs.map(d => ({ id: d.id, ...d.data() })) as Aluno[];
         
-        // Ordenação: 1. Presenças (Desc) | 2. Horário do último check-in (Asc - Desempate)
-        const sorted = data.sort((a, b) => {
+        const todosAlunos = snapshot.docs.map(d => {
+          const dados = d.data();
+          return { 
+            id: d.id, 
+            ...dados,
+            // Lógica de Fallback: Se não tem classe, é Jovens
+            classe: dados.classe || "jovens" 
+          };
+        }) as Aluno[];
+
+        // 3. Aplica os Filtros (Classe + Blacklist)
+        const alunosValidos = todosAlunos
+          .filter(a => a.classe === classeId)
+          .filter(a => !PROFESSORES_IDS.includes(a.id));
+
+        // 4. Ordenação (Pontos > Tempo)
+        const sorted = alunosValidos.sort((a, b) => {
           if (b.presencas !== a.presencas) return b.presencas - a.presencas;
           const timeA = a.ultimoCheckin?.seconds || 0;
           const timeB = b.ultimoCheckin?.seconds || 0;
@@ -46,15 +86,14 @@ export default function RankingPage() {
     fetchRanking();
   }, []);
 
-  // Separação dos dados para o Pódio
   const top3 = useMemo(() => alunos.slice(0, 3), [alunos]);
   const resto = useMemo(() => alunos.slice(3), [alunos]);
 
   if (!mounted) return null;
 
   return (
-    <main className="flex-1 flex flex-col no-scrollbar overflow-y-auto bg-white">
-      {/* HEADER NAV */}
+    <main className="flex-1 flex flex-col no-scrollbar overflow-y-auto bg-white min-h-screen">
+      {/* HEADER NAV (ORIGINAL) */}
       <header className="sticky top-0 z-40 glass px-6 pt-12 pb-4 flex items-center gap-4">
         <Link 
           href="/" 
@@ -62,7 +101,12 @@ export default function RankingPage() {
         >
           <ArrowLeft size={24} />
         </Link>
-        <h1 className="text-xl font-bold text-slate-900 tracking-tight">Liga Jovem</h1>
+        <div>
+          <h1 className="text-xl font-bold text-slate-900 tracking-tight">Ranking Geral</h1>
+          <p className="text-xs font-bold text-slate-400 uppercase tracking-widest flex items-center gap-1">
+            <Users size={10} /> {classeNome}
+          </p>
+        </div>
       </header>
 
       <div className="flex-1 px-6 pt-6 pb-12">
@@ -71,11 +115,15 @@ export default function RankingPage() {
             <div className="w-12 h-12 border-4 border-indigo-500 border-t-transparent rounded-full animate-spin" />
             <p className="text-slate-400 font-medium animate-pulse">Calculando posições...</p>
           </div>
+        ) : alunos.length === 0 ? (
+           <div className="text-center py-20 opacity-50">
+             <p className="text-slate-400 font-medium">Nenhum aluno pontuou nesta classe ainda.</p>
+           </div>
         ) : (
           <>
-            {/* 1. O PÓDIO (TOP 3) */}
+            {/* 1. O PÓDIO (TOP 3)*/}
             <section className="flex items-end justify-center gap-2 mb-12 mt-4 h-56">
-              {/* 2º LUGAR (Esquerda) */}
+              {/* 2º LUGAR */}
               {top3[1] && (
                 <PodiumColumn 
                   aluno={top3[1]} 
@@ -87,7 +135,7 @@ export default function RankingPage() {
                 />
               )}
               
-              {/* 1º LUGAR (Centro) */}
+              {/* 1º LUGAR */}
               {top3[0] && (
                 <PodiumColumn 
                   aluno={top3[0]} 
@@ -100,7 +148,7 @@ export default function RankingPage() {
                 />
               )}
 
-              {/* 3º LUGAR (Direita) */}
+              {/* 3º LUGAR */}
               {top3[2] && (
                 <PodiumColumn 
                   aluno={top3[2]} 
@@ -113,7 +161,7 @@ export default function RankingPage() {
               )}
             </section>
 
-            {/* 2. LISTA RESTANTE */}
+            {/* 2. LISTA RESTANTE*/}
             <section className="space-y-2">
               <h2 className="text-xs font-bold text-slate-400 uppercase tracking-widest mb-4">Mural de Honra</h2>
               {resto.map((aluno, index) => (
@@ -129,7 +177,7 @@ export default function RankingPage() {
                     <div className="w-10 h-10 rounded-xl bg-white border border-slate-200 flex items-center justify-center font-bold text-slate-500 text-xs">
                       {aluno.nome.substring(0, 2).toUpperCase()}
                     </div>
-                    <span className="font-bold text-slate-700 text-sm">{aluno.nome}</span>
+                    <span className="font-bold text-slate-700 text-sm truncate max-w-[150px]">{aluno.nome}</span>
                   </div>
                   <div className="flex items-center gap-1.5">
                     <span className="font-black text-slate-900">{aluno.presencas}</span>
