@@ -11,15 +11,15 @@ import { cn } from "@/lib/utils";
 // CONFIGURAÇÃO: BLACKLIST PROFESSORES
 const PROFESSORES_IDS = [
   "M4ialQNzQrB72gNJCYfF",//Kleyson
-  "40Al8hIstVIOsykySkFh",//Makel
-  "806Kb6ZfsBFIsUY8GdYd",//Jarlean
+  // "40Al8hIstVIOsykySkFh",//Makel
+  // "806Kb6ZfsBFIsUY8GdYd",//Jarlean
   "9JIoC3V8UD49mhw0ZOII",//Nanda
   "FtXEvoTMnhCaUs02WwKc",//Degley
-  "G4b2wQKTHnzND4aBtyWg",//Pietra
+  // "G4b2wQKTHnzND4aBtyWg",//Pietra
   "YspNbmYvpK3ylOC7MnJn",//Navit
-  "mUivx4Ms9w6p3mPOmbNx",//Ingryd
-  "Wwn7VuWSh2OnlnUKWPtO",//Erica juvenis, validar se deixa na regra
-  "jD1dMnQ7ZQOf6ztS7Xvv",//João juvenis, validar se deixa na regra
+  // "mUivx4Ms9w6p3mPOmbNx",//Ingryd
+  // "Wwn7VuWSh2OnlnUKWPtO",//Erica juvenis, validar se deixa na regra
+  // "jD1dMnQ7ZQOf6ztS7Xvv",//João juvenis, validar se deixa na regra
 ];
 
 interface Aluno {

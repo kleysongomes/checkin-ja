@@ -6,11 +6,24 @@ import {
   collection, addDoc, getDocs, query, updateDoc, doc, 
   increment, serverTimestamp, arrayUnion, Timestamp 
 } from "firebase/firestore";
-import { Search, Trophy, Check, Plus, X, Loader2, CalendarClock, LayoutDashboard, ChevronRight, Beaker, Users, UserCheck, ArrowLeft } from "lucide-react";
+import { Search, Trophy, Check, Plus, X, Loader2, CalendarClock, LayoutDashboard, ChevronRight, Beaker, Users, UserCheck, ArrowLeft, Info } from "lucide-react";
 import toast from "react-hot-toast";
 import { motion, AnimatePresence } from "framer-motion";
 import Link from "next/link";
 import { cn } from "@/lib/utils";
+
+// CONFIGURAÇÃO DO EVENTO (PROPAGANDA & REGRAS)
+const URL_IMAGEM_EVENTO = "/evento.jpg"; 
+const EVENTO_TITULO = "Sorteio Thogether";
+const EVENTO_REGRAS = [
+  "1. Curioso né? Ainda estamos preparando tudo",
+  "2. Pode sair daqui, ainda estamos organizando as regras",
+  "3. Tu ainda está aqui? kkkk vai embora!",
+  "4. Agora ja chega, se tu continuar vai saber o que é bom para tosse",
+  "5. KKKK tu não aprende né?",
+  "6. Se tu continuar, vai ter que ir pro castigo!",
+  "7. Sai daqui!"
+];
 
 // CONFIGURAÇÃO DE CLASSES
 const CLASSES_DISPONIVEIS = [
@@ -106,6 +119,9 @@ function HomePage({ classeAtual, onVoltar }: { classeAtual: typeof CLASSES_DISPO
   const [loading, setLoading] = useState(true);
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [isStatsModalOpen, setIsStatsModalOpen] = useState(false);
+  const [isAdModalOpen, setIsAdModalOpen] = useState(false); // Propaganda
+  const [isEventRulesModalOpen, setIsEventRulesModalOpen] = useState(false); // Regras do Evento
+  
   const [selectedAluno, setSelectedAluno] = useState<Aluno | null>(null);
   const [novoNome, setNovoNome] = useState("");
 
@@ -204,6 +220,12 @@ function HomePage({ classeAtual, onVoltar }: { classeAtual: typeof CLASSES_DISPO
       ));
 
       toast.success("Check-in realizado!", { id: toastId });
+      
+      // ACIONA O MODAL DA PROPAGANDA AQUI
+      setTimeout(() => {
+        setIsAdModalOpen(true);
+      }, 300);
+
     } catch (e) { toast.error("Erro ao salvar", { id: toastId }); }
   };
 
@@ -233,6 +255,10 @@ function HomePage({ classeAtual, onVoltar }: { classeAtual: typeof CLASSES_DISPO
       setAlunos(prev => [...prev, novo].sort((a,b) => a.nome.localeCompare(b.nome)));
       setNovoNome("");
       toast.success(`Bem-vindo à ${classeAtual.nome}!`, { id: toastId });
+      
+      if (eHorarioValido) {
+        setTimeout(() => setIsAdModalOpen(true), 300);
+      }
     } catch (e) { toast.error("Erro ao cadastrar", { id: toastId }); }
   };
 
@@ -329,6 +355,7 @@ function HomePage({ classeAtual, onVoltar }: { classeAtual: typeof CLASSES_DISPO
         </button>
       </div>
 
+      {/* MODAL 1: PERGUNTAS MISSIONÁRIAS */}
       <AnimatePresence>
         {isStatsModalOpen && (
           <>
@@ -353,6 +380,7 @@ function HomePage({ classeAtual, onVoltar }: { classeAtual: typeof CLASSES_DISPO
         )}
       </AnimatePresence>
 
+      {/* MODAL 2: CRIAÇÃO DE PERFIL */}
       <AnimatePresence>
         {isModalOpen && (
           <>
@@ -368,6 +396,98 @@ function HomePage({ classeAtual, onVoltar }: { classeAtual: typeof CLASSES_DISPO
           </>
         )}
       </AnimatePresence>
+
+      {/* MODAL 3: PROPAGANDA/EVENTO */}
+      <AnimatePresence>
+        {isAdModalOpen && (
+          <>
+            <motion.div 
+              initial={{ opacity: 0 }} 
+              animate={{ opacity: 1 }} 
+              exit={{ opacity: 0 }} 
+              onClick={() => setIsAdModalOpen(false)} 
+              className="fixed inset-0 bg-slate-900/80 backdrop-blur-sm z-[60]" 
+            />
+            <motion.div 
+              initial={{ scale: 0.9, opacity: 0, y: "-50%", x: "-50%" }} 
+              animate={{ scale: 1, opacity: 1, y: "-50%", x: "-50%" }} 
+              exit={{ scale: 0.95, opacity: 0, y: "-50%", x: "-50%" }} 
+              className="fixed top-1/2 left-1/2 z-[60] w-[90%] max-w-sm flex flex-col items-center gap-4"
+            >
+              <div className="relative w-full bg-transparent rounded-3xl overflow-hidden shadow-2xl">
+                <button 
+                  onClick={() => setIsAdModalOpen(false)} 
+                  className="absolute top-3 right-3 bg-black/60 backdrop-blur-md text-white p-2 rounded-full hover:bg-black/80 transition-colors z-10"
+                >
+                  <X size={20} strokeWidth={3} />
+                </button>
+                <img 
+                  src={URL_IMAGEM_EVENTO} 
+                  alt="Aviso do Evento" 
+                  className="w-full h-auto object-contain max-h-[70vh] rounded-3xl pointer-events-none bg-white" 
+                />
+              </div>
+              
+              {/* BOTÃO SAIBA MAIS */}
+              <button 
+                onClick={() => {
+                  setIsAdModalOpen(false);
+                  setIsEventRulesModalOpen(true);
+                }} 
+                className="w-full bg-indigo-600 text-white py-4 rounded-3xl font-black text-lg shadow-xl shadow-indigo-900/20 active:scale-95 transition-transform flex items-center justify-center gap-2"
+              >
+                <Info size={22} />
+                Clica aqui vai!
+              </button>
+            </motion.div>
+          </>
+        )}
+      </AnimatePresence>
+
+      {/* MODAL 4: REGRAS DO EVENTO */}
+      <AnimatePresence>
+        {isEventRulesModalOpen && (
+          <>
+            <motion.div 
+              initial={{ opacity: 0 }} 
+              animate={{ opacity: 1 }} 
+              exit={{ opacity: 0 }} 
+              onClick={() => setIsEventRulesModalOpen(false)} 
+              className="fixed inset-0 bg-slate-900/80 backdrop-blur-sm z-[70]" 
+            />
+            <motion.div 
+              initial={{ y: 100, opacity: 0 }} 
+              animate={{ y: 0, opacity: 1 }} 
+              exit={{ y: 100, opacity: 0 }} 
+              className="fixed bottom-6 left-6 right-6 md:left-auto md:right-auto md:w-[480px] md:bottom-auto md:top-1/2 md:-translate-y-1/2 md:translate-x-1/2 bg-white p-8 rounded-[2.5rem] shadow-2xl z-[70] max-h-[85vh] flex flex-col"
+            >
+              <div className="flex justify-between items-start mb-6 shrink-0">
+                <div>
+                  <h3 className="text-xl font-black text-slate-900 tracking-tight leading-tight">{EVENTO_TITULO}</h3>
+                  <p className="text-slate-500 text-xs font-bold uppercase tracking-widest mt-1">Regras & Requisitos</p>
+                </div>
+                <button onClick={() => setIsEventRulesModalOpen(false)} className="text-slate-400 bg-slate-100 p-2 rounded-full hover:bg-slate-200 transition-colors"><X size={20}/></button>
+              </div>
+              
+              <div className="overflow-y-auto no-scrollbar space-y-3 mb-6 flex-1">
+                {EVENTO_REGRAS.map((regra, idx) => (
+                  <div key={idx} className="bg-indigo-50/50 p-4 rounded-2xl border border-indigo-100 text-slate-700 text-sm font-medium leading-relaxed">
+                    {regra}
+                  </div>
+                ))}
+              </div>
+
+              <button 
+                onClick={() => setIsEventRulesModalOpen(false)} 
+                className="w-full bg-slate-900 text-white py-4 rounded-2xl font-black text-lg active:scale-95 transition-transform shrink-0"
+              >
+                Entendi!
+              </button>
+            </motion.div>
+          </>
+        )}
+      </AnimatePresence>
+
     </main>
   );
 }
