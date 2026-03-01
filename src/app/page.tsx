@@ -6,7 +6,7 @@ import {
   collection, addDoc, getDocs, query, updateDoc, doc, 
   increment, serverTimestamp, arrayUnion, Timestamp 
 } from "firebase/firestore";
-import { Search, Trophy, Check, Plus, X, Loader2, CalendarClock, LayoutDashboard, ChevronRight, Beaker, Users, UserCheck, ArrowLeft, Info } from "lucide-react";
+import { Search, Trophy, Check, Plus, X, Loader2, CalendarClock, LayoutDashboard, ChevronRight, Beaker, Users, UserCheck, ArrowLeft, Info, Gift } from "lucide-react";
 import toast from "react-hot-toast";
 import { motion, AnimatePresence } from "framer-motion";
 import Link from "next/link";
@@ -14,15 +14,42 @@ import { cn } from "@/lib/utils";
 
 // CONFIGURAÇÃO DO EVENTO (PROPAGANDA & REGRAS)
 const URL_IMAGEM_EVENTO = "/evento.jpg"; 
-const EVENTO_TITULO = "Sorteio Thogether";
-const EVENTO_REGRAS = [
-  "1. Curioso né? Ainda estamos preparando tudo",
-  "2. Pode sair daqui, ainda estamos organizando as regras",
-  "3. Tu ainda está aqui? kkkk vai embora!",
-  "4. Agora ja chega, se tu continuar vai saber o que é bom para tosse",
-  "5. KKKK tu não aprende né?",
-  "6. Se tu continuar, vai ter que ir pro castigo!",
-  "7. Sai daqui!"
+const EVENTO_TITULO = "Premiação ES Jovens";
+
+const EVENTO_SECOES = [
+  {
+    tipo: "geral",
+    titulo: "Regras Gerais",
+    itens: [
+      "1. O Vencedor se dará por quantidade de presença.",
+      "2. O Check-in só pode ser feito presencialmente na IASDCE.",
+      "3. Todo resultado será anunciado via boletim informativo ou aviso JA.",
+      "4. O ranking web é para o prêmio Trimestral. O resultado Semestral será informado no dia 20/06."
+    ]
+  },
+  {
+    tipo: "secundario",
+    titulo: "Prêmio Trimestral",
+    itens: [
+      "🎁 1 Camisa Jovem IPROMOVE/SIMILLAR"
+    ]
+  },
+  {
+    tipo: "principal",
+    titulo: "Prêmio Semestral (Together)",
+    premios: [
+      "🥇 1º - Inscrição completa do Together",
+      "🥈 2º - Somente inscrição do Together",
+      "🥉 3º - Big Cozinha (ou o valor de R$120)"
+    ],
+    condicoesTitulo: "Condições Obrigatórias:",
+    itens: [
+      "• No período informado, o candidato(a) deve ter, sem falta, praticado, pelo menos uma vez, as ações: Missionárias, Estudo da Lição e PG.",
+      "• Para critério de desempate, quando coincidir a quantidade de presença, deve ser utilizado 1pt para cada ação. Totalizando novos resultados.",
+      "• O Prêmio é transferível, dado que 'o que é meu eu faço o que quiser'.",
+      "• Caso o candidato tenha feito a inscrição do evento antes da premiação, será feito pagamento via PIX do valor referente."
+    ]
+  }
 ];
 
 // CONFIGURAÇÃO DE CLASSES
@@ -119,8 +146,8 @@ function HomePage({ classeAtual, onVoltar }: { classeAtual: typeof CLASSES_DISPO
   const [loading, setLoading] = useState(true);
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [isStatsModalOpen, setIsStatsModalOpen] = useState(false);
-  const [isAdModalOpen, setIsAdModalOpen] = useState(false); // Propaganda
-  const [isEventRulesModalOpen, setIsEventRulesModalOpen] = useState(false); // Regras do Evento
+  const [isAdModalOpen, setIsAdModalOpen] = useState(false); 
+  const [isEventRulesModalOpen, setIsEventRulesModalOpen] = useState(false); 
   
   const [selectedAluno, setSelectedAluno] = useState<Aluno | null>(null);
   const [novoNome, setNovoNome] = useState("");
@@ -437,7 +464,7 @@ function HomePage({ classeAtual, onVoltar }: { classeAtual: typeof CLASSES_DISPO
                 className="w-full bg-indigo-600 text-white py-4 rounded-3xl font-black text-lg shadow-xl shadow-indigo-900/20 active:scale-95 transition-transform flex items-center justify-center gap-2"
               >
                 <Info size={22} />
-                Clica aqui vai!
+                Clica aqui, vai!
               </button>
             </motion.div>
           </>
@@ -462,26 +489,70 @@ function HomePage({ classeAtual, onVoltar }: { classeAtual: typeof CLASSES_DISPO
               className="fixed bottom-6 left-6 right-6 md:left-auto md:right-auto md:w-[480px] md:bottom-auto md:top-1/2 md:-translate-y-1/2 md:translate-x-1/2 bg-white p-8 rounded-[2.5rem] shadow-2xl z-[70] max-h-[85vh] flex flex-col"
             >
               <div className="flex justify-between items-start mb-6 shrink-0">
-                <div>
-                  <h3 className="text-xl font-black text-slate-900 tracking-tight leading-tight">{EVENTO_TITULO}</h3>
-                  <p className="text-slate-500 text-xs font-bold uppercase tracking-widest mt-1">Regras & Requisitos</p>
+                <div className="flex items-center gap-3">
+                  <div className="bg-orange-100 p-3 rounded-2xl text-orange-600"><Gift size={24} /></div>
+                  <div>
+                    <h3 className="text-xl font-black text-slate-900 tracking-tight leading-tight">{EVENTO_TITULO}</h3>
+                    <p className="text-slate-500 text-[10px] font-bold uppercase tracking-widest mt-1">Regras & Requisitos</p>
+                  </div>
                 </div>
                 <button onClick={() => setIsEventRulesModalOpen(false)} className="text-slate-400 bg-slate-100 p-2 rounded-full hover:bg-slate-200 transition-colors"><X size={20}/></button>
               </div>
               
-              <div className="overflow-y-auto no-scrollbar space-y-3 mb-6 flex-1">
-                {EVENTO_REGRAS.map((regra, idx) => (
-                  <div key={idx} className="bg-indigo-50/50 p-4 rounded-2xl border border-indigo-100 text-slate-700 text-sm font-medium leading-relaxed">
-                    {regra}
+              {/* ÁREA DE SCROLL COM AS SEÇÕES ESTRUTURADAS */}
+              <div className="overflow-y-auto no-scrollbar space-y-4 mb-6 flex-1 pr-1">
+                {EVENTO_SECOES.map((secao, idx) => (
+                  <div key={idx} className={cn(
+                    "p-5 rounded-[1.5rem] border",
+                    secao.tipo === 'geral' ? "bg-slate-50 border-slate-200" :
+                    secao.tipo === 'secundario' ? "bg-indigo-50 border-indigo-100" :
+                    "bg-emerald-50 border-emerald-200 shadow-sm"
+                  )}>
+                    {/* Título da Seção */}
+                    <h4 className={cn(
+                      "font-black text-[11px] uppercase tracking-widest mb-3",
+                      secao.tipo === 'geral' ? "text-slate-500" :
+                      secao.tipo === 'secundario' ? "text-indigo-600" :
+                      "text-emerald-700 flex items-center gap-1"
+                    )}>
+                      {secao.tipo === 'principal' && <Trophy size={14} />} {secao.titulo}
+                    </h4>
+
+                    {/* Prêmios (Se houver) */}
+                    {secao.premios && (
+                      <div className="mb-4 space-y-2">
+                        {secao.premios.map((premio, i) => (
+                          <div key={i} className="font-bold text-slate-800 text-sm bg-white/60 p-2 rounded-xl border border-emerald-100/50">
+                            {premio}
+                          </div>
+                        ))}
+                      </div>
+                    )}
+
+                    {/* Condições Título (Se houver) */}
+                    {secao.condicoesTitulo && (
+                      <h5 className="font-bold text-[10px] text-emerald-600/80 mb-2 uppercase tracking-wider">
+                        {secao.condicoesTitulo}
+                      </h5>
+                    )}
+
+                    {/* Itens/Regras */}
+                    <div className="space-y-2.5">
+                      {secao.itens.map((item, i) => (
+                        <p key={i} className={cn(
+                          "text-sm font-medium leading-relaxed",
+                          secao.tipo === 'geral' ? "text-slate-600" : "text-slate-700"
+                        )}>
+                          {item}
+                        </p>
+                      ))}
+                    </div>
                   </div>
                 ))}
               </div>
 
-              <button 
-                onClick={() => setIsEventRulesModalOpen(false)} 
-                className="w-full bg-slate-900 text-white py-4 rounded-2xl font-black text-lg active:scale-95 transition-transform shrink-0"
-              >
-                Entendi!
+              <button onClick={() => setIsEventRulesModalOpen(false)} className="w-full bg-slate-900 text-white py-4 rounded-2xl font-black text-lg active:scale-95 transition-transform shrink-0">
+                Entendi as Regras!
               </button>
             </motion.div>
           </>
