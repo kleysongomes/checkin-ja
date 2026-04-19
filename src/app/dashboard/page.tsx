@@ -3,13 +3,14 @@
 import { useState, useEffect, useMemo } from "react";
 import { db } from "@/lib/firebase";
 import { collection, getDocs, query, Timestamp } from "firebase/firestore";
-import { ArrowLeft, BookOpen, Users, GraduationCap, Flame, CalendarDays, History, FileText, Loader2, X, Calendar, Lock } from "lucide-react";
+import { ArrowLeft, BookOpen, Users, GraduationCap, Flame, CalendarDays, History, FileText, Loader2, X, Calendar, Lock, BookA } from "lucide-react";
 import Link from "next/link";
 import { motion, AnimatePresence } from "framer-motion";
 import { cn } from "@/lib/utils";
 import jsPDF from "jspdf";
 import autoTable from "jspdf-autotable";
 import toast from "react-hot-toast";
+import { CartaoRegistroModal } from "../card/CartaoRegistroModal";
 
 // SENHA DE ACESSO AO RELATÓRIO
 const SENHA_RELATORIO = "jovens1997@";
@@ -45,6 +46,7 @@ export default function Dashboard() {
   const [isAuthModalOpen, setIsAuthModalOpen] = useState(false);
   const [passwordInput, setPasswordInput] = useState("");
   const [isReportModalOpen, setIsReportModalOpen] = useState(false);
+  const [isCartaoModalOpen, setIsCartaoModalOpen] = useState(false);
   
   const [reportDate, setReportDate] = useState(new Date().toISOString().split('T')[0]);
   const [reportType, setReportType] = useState<ReportType>('semanal');
@@ -427,11 +429,18 @@ export default function Dashboard() {
             </p>
           </div>
         </div>
-        
-        {/* BOTÃO QUE INICIA O FLUXO DE SENHA */}
-        <button onClick={() => setIsAuthModalOpen(true)} className="p-3 bg-indigo-600 text-white rounded-2xl shadow-lg shadow-indigo-200 active:scale-90 transition-all">
-          <FileText size={22} />
-        </button>
+
+        <div className="flex items-center gap-2">
+          {/* BOTÃO NOVO: CARTÃO DE REGISTRO */}
+          <button onClick={() => setIsCartaoModalOpen(true)} className="p-3 bg-emerald-500 text-white rounded-2xl shadow-lg shadow-emerald-200 active:scale-90 transition-all">
+            <BookA size={22} />
+          </button>
+
+          {/* BOTÃO ANTIGO: RELATÓRIO DE INTELIGÊNCIA */}
+          <button onClick={() => setIsAuthModalOpen(true)} className="p-3 bg-indigo-600 text-white rounded-2xl shadow-lg shadow-indigo-200 active:scale-90 transition-all">
+            <FileText size={22} />
+          </button>
+        </div>
       </header>
 
       <div className="p-6 space-y-8 pb-20">
@@ -543,6 +552,14 @@ export default function Dashboard() {
           </>
         )}
       </AnimatePresence>
+
+      {/* NOVO MODAL EXTERNO: CARTÃO DE REGISTRO */}
+      <CartaoRegistroModal 
+        isOpen={isCartaoModalOpen} 
+        onClose={() => setIsCartaoModalOpen(false)} 
+        classeId={classeId} 
+        classeNome={classeNome} 
+      />
     </main>
   );
 }
