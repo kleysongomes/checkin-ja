@@ -153,6 +153,7 @@ function HomePage({ classeAtual, onVoltar }: { classeAtual: typeof CLASSES_DISPO
   const [novoNome, setNovoNome] = useState("");
 
   const [missaoStats, setMissaoStats] = useState({ licao: false, pg: false, estudo: false, missao: false });
+  const [pendingNovoNome, setPendingNovoNome] = useState("");
 
   // CARREGAMENTO COM FALLBACK PARA CLASSE DE JOVENS
   useEffect(() => {
@@ -216,77 +217,91 @@ function HomePage({ classeAtual, onVoltar }: { classeAtual: typeof CLASSES_DISPO
   const handleCheckinStart = (aluno: Aluno) => {
     if (!validarRegrasCheckin(aluno.ultimoCheckin)) return;
     setSelectedAluno(aluno);
+    setPendingNovoNome("");
     setMissaoStats({ licao: false, pg: false, estudo: false, missao: false });
     setIsStatsModalOpen(true);
   };
 
+  const handleCancelarCheckin = () => {
+    setIsStatsModalOpen(false);
+    setSelectedAluno(null);
+    setPendingNovoNome("");
+  };
+
   const handleFinalizarCheckin = async () => {
-    if (!selectedAluno) return;
     setIsStatsModalOpen(false);
     const toastId = toast.loading("Salvando...");
 
     try {
-      await addDoc(collection(db, "estatisticas"), {
-        alunoId: selectedAluno.id,
-        nome: selectedAluno.nome,
-        classe: classeAtual.id,
-        data: serverTimestamp(),
-        ...missaoStats
-      });
+      if (selectedAluno) {
+        // Fluxo aluno existente
+        await addDoc(collection(db, "estatisticas"), {
+          alunoId: selectedAluno.id,
+          nome: selectedAluno.nome,
+          classe: classeAtual.id,
+          data: serverTimestamp(),
+          ...missaoStats
+        });
+        await updateDoc(doc(db, "alunos", selectedAluno.id), {
+          presencas: increment(1),
+          ultimoCheckin: serverTimestamp(),
+          historico: arrayUnion(new Date()),
+          classe: classeAtual.id
+        });
+        setAlunos(prev => prev.map(a =>
+          a.id === selectedAluno.id ? { ...a, presencas: a.presencas + 1, ultimoCheckin: Timestamp.now() } : a
+        ));
+        setSelectedAluno(null);
+        toast.success("Check-in realizado!", { id: toastId });
 
-      await updateDoc(doc(db, "alunos", selectedAluno.id), {
-        presencas: increment(1),
-        ultimoCheckin: serverTimestamp(),
-        historico: arrayUnion(new Date()),
-        // Garante que se o aluno antigo não tinha classe, agora passa a ter
-        classe: classeAtual.id 
-      });
+      } else if (pendingNovoNome) {
+        // Fluxo novo aluno: cria perfil + salva estatísticas
+        const agora = new Date();
+        const eHorarioValido = (agora.getDay() === 6 && agora.getHours() < 12) || MODO_TESTE;
+        const dados = {
+          nome: pendingNovoNome,
+          classe: classeAtual.id,
+          presencas: eHorarioValido ? 1 : 0,
+          ultimoCheckin: eHorarioValido ? serverTimestamp() : null,
+          historico: eHorarioValido ? [new Date()] : []
+        };
+        const docRef = await addDoc(collection(db, "alunos"), dados);
+        if (eHorarioValido) {
+          await addDoc(collection(db, "estatisticas"), {
+            alunoId: docRef.id,
+            nome: pendingNovoNome,
+            classe: classeAtual.id,
+            data: serverTimestamp(),
+            ...missaoStats
+          });
+        }
+        const novo: Aluno = {
+          id: docRef.id,
+          nome: pendingNovoNome,
+          classe: classeAtual.id,
+          presencas: dados.presencas,
+          ultimoCheckin: eHorarioValido ? Timestamp.now() : null
+        };
+        setAlunos(prev => [...prev, novo].sort((a, b) => a.nome.localeCompare(b.nome)));
+        setPendingNovoNome("");
+        toast.success(`Bem-vindo(a) à ${classeAtual.nome}!`, { id: toastId });
+      }
 
-      setAlunos(prev => prev.map(a => 
-        a.id === selectedAluno.id ? { ...a, presencas: a.presencas + 1, ultimoCheckin: Timestamp.now() } : a
-      ));
+      setTimeout(() => setIsAdModalOpen(true), 300);
 
-      toast.success("Check-in realizado!", { id: toastId });
-      
-      // ACIONA O MODAL DA PROPAGANDA AQUI
-      setTimeout(() => {
-        setIsAdModalOpen(true);
-      }, 300);
-
-    } catch (e) { toast.error("Erro ao salvar", { id: toastId }); }
+    } catch (e) {
+      toast.error("Erro ao salvar", { id: toastId });
+      setPendingNovoNome("");
+    }
   };
 
-  const handleNovoAluno = async () => {
+  const handleNovoAluno = () => {
     if (!novoNome.trim()) return;
-    const agora = new Date();
-    const eHorarioValido = (agora.getDay() === 6 && agora.getHours() < 12) || MODO_TESTE;
+    setPendingNovoNome(novoNome.trim());
+    setNovoNome("");
     setIsModalOpen(false);
-    const toastId = toast.loading("Cadastrando...");
-
-    try {
-      const dados = {
-        nome: novoNome,
-        classe: classeAtual.id,
-        presencas: eHorarioValido ? 1 : 0,
-        ultimoCheckin: eHorarioValido ? serverTimestamp() : null,
-        historico: eHorarioValido ? [new Date()] : []
-      };
-      const docRef = await addDoc(collection(db, "alunos"), dados);
-      const novo: Aluno = { 
-        id: docRef.id, 
-        nome: novoNome, 
-        classe: classeAtual.id,
-        presencas: dados.presencas, 
-        ultimoCheckin: eHorarioValido ? Timestamp.now() : null 
-      };
-      setAlunos(prev => [...prev, novo].sort((a,b) => a.nome.localeCompare(b.nome)));
-      setNovoNome("");
-      toast.success(`Bem-vindo à ${classeAtual.nome}!`, { id: toastId });
-      
-      if (eHorarioValido) {
-        setTimeout(() => setIsAdModalOpen(true), 300);
-      }
-    } catch (e) { toast.error("Erro ao cadastrar", { id: toastId }); }
+    setMissaoStats({ licao: false, pg: false, estudo: false, missao: false });
+    setIsStatsModalOpen(true);
   };
 
   const listaFiltrada = useMemo(() => {
@@ -386,14 +401,16 @@ function HomePage({ classeAtual, onVoltar }: { classeAtual: typeof CLASSES_DISPO
       <AnimatePresence>
         {isStatsModalOpen && (
           <>
-            <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} onClick={() => setIsStatsModalOpen(false)} className="fixed inset-0 bg-slate-900/40 backdrop-blur-sm z-50" />
+            <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} onClick={handleCancelarCheckin} className="fixed inset-0 bg-slate-900/40 backdrop-blur-sm z-50" />
             <motion.div initial={{ y: "100%" }} animate={{ y: 0 }} exit={{ y: "100%" }} className="fixed bottom-0 left-0 right-0 md:w-[480px] bg-white p-8 rounded-t-[2.5rem] shadow-2xl z-50">
               <div className="flex justify-between items-center mb-6">
                 <div>
-                  <h3 className="text-xl font-bold text-slate-900 tracking-tight">Check-in: {selectedAluno?.nome.split(" ")[0]}</h3>
+                  <h3 className="text-xl font-bold text-slate-900 tracking-tight">
+                    Check-in: {(selectedAluno?.nome || pendingNovoNome).split(" ")[0]}
+                  </h3>
                   <p className="text-slate-500 text-xs font-bold uppercase">Termômetro Missionário</p>
                 </div>
-                <button onClick={() => setIsStatsModalOpen(false)} className="text-slate-400"><X size={24}/></button>
+                <button onClick={handleCancelarCheckin} className="text-slate-400"><X size={24}/></button>
               </div>
               <div className="space-y-4 mb-8">
                 <StatToggle label="Estudou a lição diariamente?" active={missaoStats.licao} onClick={() => setMissaoStats({...missaoStats, licao: !missaoStats.licao})} />
@@ -417,8 +434,10 @@ function HomePage({ classeAtual, onVoltar }: { classeAtual: typeof CLASSES_DISPO
                 <h3 className="text-xl font-bold text-slate-900 tracking-tight">Adicionando na lista</h3>
                 <button onClick={() => setIsModalOpen(false)} className="text-slate-400"><X size={24}/></button>
               </div>
-              <input autoFocus placeholder="Nome ou Apelido" className="w-full bg-slate-50 border-2 border-slate-100 rounded-2xl p-5 text-lg font-bold outline-none mb-6" value={novoNome} onChange={(e) => setNovoNome(e.target.value)} />
-              <button onClick={handleNovoAluno} className="w-full bg-indigo-600 text-white py-5 rounded-2xl font-black text-lg">Criar Perfil</button>
+              <input autoFocus placeholder="Nome ou Apelido" className="w-full bg-slate-50 border-2 border-slate-100 rounded-2xl p-5 text-lg font-bold outline-none mb-6" value={novoNome} onChange={(e) => setNovoNome(e.target.value)} onKeyDown={(e) => e.key === "Enter" && handleNovoAluno()} />
+              <button onClick={handleNovoAluno} className="w-full bg-indigo-600 text-white py-5 rounded-2xl font-black text-lg flex items-center justify-center gap-2">
+                Continuar <ChevronRight size={20} strokeWidth={3} />
+              </button>
             </motion.div>
           </>
         )}
