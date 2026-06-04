@@ -3,9 +3,10 @@
 import { useState, useEffect, useMemo } from "react";
 import { db } from "@/lib/firebase";
 import { collection, getDocs, query, Timestamp } from "firebase/firestore";
-import { ArrowLeft, Crown, Star, Users } from "lucide-react";
+import { ArrowLeft, Crown, Star, Users, GraduationCap } from "lucide-react";
 import Link from "next/link";
 import { motion } from "framer-motion";
+import Image from "next/image";
 import { cn } from "@/lib/utils";
 
 // CONFIGURAÇÃO: BLACKLIST PROFESSORES
@@ -93,23 +94,49 @@ export default function RankingPage() {
 
   return (
     <main className="flex-1 flex flex-col no-scrollbar overflow-y-auto bg-white min-h-screen">
-      {/* HEADER NAV (ORIGINAL) */}
       <header className="sticky top-0 z-40 glass px-6 pt-12 pb-4 flex items-center gap-4">
-        <Link 
-          href="/" 
+        <Link
+          href="/"
           className="p-2 -ml-2 rounded-full hover:bg-slate-100 text-slate-600 transition-all active:scale-90"
         >
           <ArrowLeft size={24} />
         </Link>
-        <div>
+        <div className="flex-1">
           <h1 className="text-xl font-bold text-slate-900 tracking-tight">Ranking Geral</h1>
           <p className="text-xs font-bold text-slate-400 uppercase tracking-widest flex items-center gap-1">
             <Users size={10} /> {classeNome}
           </p>
         </div>
+        <Link href="/professores" className="p-3 bg-slate-100 rounded-2xl hover:bg-indigo-50 text-slate-600 shadow-sm border border-slate-200">
+          <GraduationCap size={22} />
+        </Link>
       </header>
 
       <div className="flex-1 px-6 pt-6 pb-12">
+        {/* BOTÃO PRÊMIO SEMESTRAL */}
+        <Link href="/ranking/semestral" className="block mb-6">
+          <motion.div
+            initial={{ opacity: 0, y: -8 }}
+            animate={{ opacity: 1, y: 0 }}
+            className="relative w-full rounded-3xl overflow-hidden shadow-md active:scale-[0.98] transition-transform"
+          >
+            <Image
+              src="/Capa.avif"
+              alt="Prêmio Semestral Together"
+              width={480}
+              height={120}
+              className="w-full object-cover object-top max-h-28"
+              priority
+            />
+            <div className="absolute inset-0 bg-gradient-to-r from-black/60 to-transparent flex items-center px-5">
+              <div>
+                <p className="text-white font-black text-base leading-tight">Prêmio Semestral</p>
+                <p className="text-white/70 text-xs">Ver ranking Together →</p>
+              </div>
+            </div>
+          </motion.div>
+        </Link>
+
         {loading ? (
           <div className="flex flex-col items-center justify-center py-20 gap-4">
             <div className="w-12 h-12 border-4 border-indigo-500 border-t-transparent rounded-full animate-spin" />
