@@ -3,7 +3,7 @@
 import { useState, useEffect } from "react";
 import { db } from "@/lib/firebase";
 import { collection, getDocs, query, where, Timestamp } from "firebase/firestore";
-import { ArrowLeft, X, CheckCircle2, XCircle, Users, BookOpen, Compass } from "lucide-react";
+import { ArrowLeft, X, CheckCircle2, XCircle, Users, BookOpen, Compass, CalendarClock } from "lucide-react";
 import Link from "next/link";
 import { motion, AnimatePresence } from "framer-motion";
 import { cn } from "@/lib/utils";
@@ -15,6 +15,12 @@ const PROFESSORES_IDS = [
   "FtXEvoTMnhCaUs02WwKc",
   "YspNbmYvpK3ylOC7MnJn",
 ];
+
+// A competição encerrou em junho: o ranking é um recorte de 01/01 a 30/06.
+const ANO_COMPETICAO = 2026;
+const INICIO_PERIODO = new Date(ANO_COMPETICAO, 0, 1, 0, 0, 0, 0);
+const FIM_PERIODO = new Date(ANO_COMPETICAO, 5, 30, 23, 59, 59, 999);
+const PERIODO_LABEL = `1º semestre ${ANO_COMPETICAO} · jan a jun`;
 
 const PREMIOS = [
   { pos: 1, emoji: "🥇", label: "Inscrição completa do Together" },
@@ -35,10 +41,12 @@ interface Stats {
   pg: number;
   estudo: number;
   missao: number;
+  presencas: number;
 }
 
 interface Candidato extends Aluno {
   stats: Stats;
+  presencasPeriodo: number;
   pontosTiebreak: number;
   apto: boolean;
   faltando: string[];
@@ -64,17 +72,21 @@ export default function RankingSemestralPage() {
           getDocs(query(collection(db, "estatisticas"), where("classe", "==", classeId))),
         ]);
 
-        // Mapa de estatísticas por alunoId
+        // Mapa de estatísticas por alunoId — só o período da competição (jan a jun)
         const statsMap = new Map<string, Stats>();
         statsSnap.docs.forEach(d => {
           const dados = d.data();
+          const data = (dados.data as Timestamp | null)?.toDate();
+          if (!data || data < INICIO_PERIODO || data > FIM_PERIODO) return;
+
           const id = dados.alunoId as string;
-          const atual = statsMap.get(id) ?? { licao: 0, pg: 0, estudo: 0, missao: 0 };
+          const atual = statsMap.get(id) ?? { licao: 0, pg: 0, estudo: 0, missao: 0, presencas: 0 };
           statsMap.set(id, {
             licao:  atual.licao  + (dados.licao  ? 1 : 0),
             pg:     atual.pg     + (dados.pg     ? 1 : 0),
             estudo: atual.estudo + (dados.estudo ? 1 : 0),
             missao: atual.missao + (dados.missao ? 1 : 0),
+            presencas: atual.presencas + 1,
           });
         });
 
@@ -83,19 +95,26 @@ export default function RankingSemestralPage() {
           .filter(a => a.classe === classeId && !PROFESSORES_IDS.includes(a.id));
 
         const lista: Candidato[] = alunos.map(aluno => {
-          const s = statsMap.get(aluno.id) ?? { licao: 0, pg: 0, estudo: 0, missao: 0 };
+          const s = statsMap.get(aluno.id) ?? { licao: 0, pg: 0, estudo: 0, missao: 0, presencas: 0 };
           const faltando: string[] = [];
           if (s.licao  === 0) faltando.push("Lição");
           if (s.pg     === 0) faltando.push("PG");
           if (s.missao === 0) faltando.push("Missão");
           const pontosTiebreak = s.licao + s.pg + s.missao;
-          return { ...aluno, stats: s, pontosTiebreak, apto: faltando.length === 0, faltando };
+          return {
+            ...aluno,
+            stats: s,
+            presencasPeriodo: s.presencas,
+            pontosTiebreak,
+            apto: faltando.length === 0,
+            faltando,
+          };
         });
 
-        // Aptos primeiro, depois por presenças desc, depois por tiebreak desc
+        // Aptos primeiro, depois por presenças no período desc, depois por tiebreak desc
         lista.sort((a, b) => {
           if (a.apto !== b.apto) return a.apto ? -1 : 1;
-          if (b.presencas !== a.presencas) return b.presencas - a.presencas;
+          if (b.presencasPeriodo !== a.presencasPeriodo) return b.presencasPeriodo - a.presencasPeriodo;
           return b.pontosTiebreak - a.pontosTiebreak;
         });
 
@@ -126,7 +145,7 @@ export default function RankingSemestralPage() {
         <div>
           <h1 className="text-xl font-bold text-slate-900 tracking-tight">Prêmio Semestral</h1>
           <p className="text-xs font-bold text-slate-400 uppercase tracking-widest flex items-center gap-1">
-            <Users size={10} /> {classeNome}
+            <Users size={10} /> {classeNome} · {PERIODO_LABEL}
           </p>
         </div>
       </header>
@@ -150,6 +169,9 @@ export default function RankingSemestralPage() {
             <div>
               <p className="text-white font-black text-lg leading-tight">Together</p>
               <p className="text-white/70 text-xs">Prêmio Semestral · ES Jovens</p>
+              <p className="mt-1.5 inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-white/20 backdrop-blur-sm text-white text-[10px] font-bold uppercase tracking-wide">
+                <CalendarClock size={10} /> Competição encerrada
+              </p>
             </div>
           </div>
         </motion.div>
@@ -161,9 +183,20 @@ export default function RankingSemestralPage() {
           transition={{ delay: 0.15 }}
           className="rounded-3xl bg-indigo-50 border border-indigo-100 p-5 space-y-3"
         >
+          <div className="flex items-start gap-2.5 pb-3 border-b border-indigo-100">
+            <CalendarClock size={16} className="text-indigo-500 shrink-0 mt-0.5" />
+            <div>
+              <p className="text-xs font-black text-indigo-600 uppercase tracking-widest">Período Apurado</p>
+              <p className="text-xs text-slate-600 leading-relaxed mt-1">
+                A competição encerrou em <strong>junho de {ANO_COMPETICAO}</strong>. Este ranking é um
+                recorte dos check-ins de <strong>01/01/{ANO_COMPETICAO} a 30/06/{ANO_COMPETICAO}</strong> —
+                registros posteriores não são contabilizados.
+              </p>
+            </div>
+          </div>
           <h2 className="text-xs font-black text-indigo-400 uppercase tracking-widest">Condições Obrigatórias</h2>
           <ul className="space-y-2 text-xs text-slate-600 leading-relaxed">
-            <li>• No período informado, o candidato(a) deve ter praticado, pelo menos uma vez, as ações: <strong>Missionárias, Estudo da Lição e PG</strong>.</li>
+            <li>• No período apurado, o candidato(a) deve ter praticado, pelo menos uma vez, as ações: <strong>Missionárias, Estudo da Lição e PG</strong>.</li>
             <li>• Para critério de desempate, é utilizado 1pt para cada ação realizada.</li>
             <li>• O Prêmio é transferível.</li>
             <li>• Caso o candidato já tenha feito a inscrição, será feito pagamento via PIX.</li>
@@ -178,11 +211,15 @@ export default function RankingSemestralPage() {
           </div>
         ) : top5.length === 0 ? (
           <div className="text-center py-20 opacity-50">
-            <p className="text-slate-400 font-medium">Nenhum participante encontrado.</p>
+            <p className="text-slate-400 font-medium">Nenhum participante apto no período.</p>
+            <p className="text-slate-300 text-xs mt-1">{PERIODO_LABEL}</p>
           </div>
         ) : (
           <section className="space-y-3">
-            <h2 className="text-xs font-black text-slate-400 uppercase tracking-widest">Classificação</h2>
+            <div className="flex items-baseline justify-between gap-2">
+              <h2 className="text-xs font-black text-slate-400 uppercase tracking-widest">Classificação</h2>
+              <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wide">{PERIODO_LABEL}</span>
+            </div>
 
             {top5.map((c, i) => {
               const pos = i + 1;
@@ -220,7 +257,7 @@ export default function RankingSemestralPage() {
                   <div className="flex-1 min-w-0">
                     <p className="font-bold text-slate-800 text-sm truncate">{c.nome}</p>
                     <div className="flex items-center gap-2 mt-0.5">
-                      <span className="text-xs text-slate-400">{c.presencas} presenças</span>
+                      <span className="text-xs text-slate-400">{c.presencasPeriodo} presenças</span>
                       {c.pontosTiebreak > 0 && (
                         <span className="text-xs text-indigo-400">· {c.pontosTiebreak}pts</span>
                       )}
@@ -280,8 +317,9 @@ export default function RankingSemestralPage() {
                   <div>
                     <p className="text-white font-black text-lg leading-tight">{selecionado.nome}</p>
                     <p className="text-white/70 text-xs mt-0.5">
-                      {selecionado.presencas} presenças · {selecionado.pontosTiebreak} pts desempate
+                      {selecionado.presencasPeriodo} presenças · {selecionado.pontosTiebreak} pts desempate
                     </p>
+                    <p className="text-white/50 text-[10px] mt-0.5">{PERIODO_LABEL}</p>
                   </div>
                   <button
                     onClick={() => setSelecionado(null)}
@@ -307,7 +345,7 @@ export default function RankingSemestralPage() {
               <div className="p-6 space-y-4">
                 {selecionado.apto ? (
                   <>
-                    <h3 className="text-xs font-black text-slate-400 uppercase tracking-widest">Ações Realizadas</h3>
+                    <h3 className="text-xs font-black text-slate-400 uppercase tracking-widest">Ações Realizadas no Período</h3>
                     <StatRow
                       icon={<BookOpen size={16} className="text-indigo-500" />}
                       label="Lição Estudada"

@@ -131,7 +131,7 @@ export default function RankingPage() {
             <div className="absolute inset-0 bg-gradient-to-r from-black/60 to-transparent flex items-center px-5">
               <div>
                 <p className="text-white font-black text-base leading-tight">Prêmio Semestral</p>
-                <p className="text-white/70 text-xs">Ver ranking Together →</p>
+                <p className="text-white/70 text-xs">Encerrado · jan a jun · Ver ranking Together →</p>
               </div>
             </div>
           </motion.div>

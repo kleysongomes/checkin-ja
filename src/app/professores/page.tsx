@@ -12,13 +12,13 @@ import { motion } from "framer-motion";
 // mesmo que ele ainda compita no ranking geral.
 const PROFESSORES_IDS = [
   "M4ialQNzQrB72gNJCYfF", // Kleyson
-  "9JIoC3V8UD49mhw0ZOII", // Nanda
+  // "9JIoC3V8UD49mhw0ZOII", // Nanda
   "FtXEvoTMnhCaUs02WwKc", // Degley
   "YspNbmYvpK3ylOC7MnJn", // Navit
   "4av584SLA0CbsAK2N0UZ", // Esther Artuanne
   "806Kb6ZfsBFIsUY8GdYd", // Jarlean
   "G4b2wQKTHnzND4aBtyWg", // Pietra
-  "mUivx4Ms9w6p3mPOmbNx", // Ingryd
+  // "mUivx4Ms9w6p3mPOmbNx", // Ingryd
 ];
 
 interface Professor {
